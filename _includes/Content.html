@@ -33,6 +33,21 @@ document.addEventListener('DOMContentLoaded', function() {
             {%- endif -%}
         {%- endfor -%}
     ];
+
+    const availableFiles = [
+        {%- assign firstf = true -%}
+        {%- for f in site.static_files -%}
+            {%- assign ext = f.extname | downcase -%}
+            {%- if ext == ".pdf" or ext == ".zip" or ext == ".pptx" -%}
+                {%- unless firstf -%},{%- endunless -%}
+                {%- assign firstf = false -%}
+                {
+                    name: "{{ f.name | escape }}",
+                    url: "{{ site.baseurl }}{{ f.path | escape }}"
+                }
+            {%- endif -%}
+        {%- endfor -%}
+    ];
     
     // Function to find note by title (case-insensitive)
     function findNoteByTitle(title) {
@@ -48,6 +63,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const stripExt = s => s.replace(/\.[^./\\]+$/, '');
         const base = stripExt(lowered);
         return availableImages.find(img => stripExt(img.name.toLowerCase()) === base);
+    }
+
+    function findFileByName(name) {
+        const lowered = name.toLowerCase();
+        const exact = availableFiles.find(f => f.name.toLowerCase() === lowered);
+        if (exact) return exact;
+        const stripExt = s => s.replace(/\.[^./\\]+$/, '');
+        const base = stripExt(lowered);
+        return availableFiles.find(f => stripExt(f.name.toLowerCase()) === base);
     }
     
     // Function to process wiki links in text nodes only
@@ -146,29 +170,48 @@ document.addEventListener('DOMContentLoaded', function() {
                         link.textContent = title;
                         linkSpan.appendChild(link);
                     } else {
-                        const foundNote = findNoteByTitle(linkText);
-                        const link = document.createElement('a');
-                        
-                        if (foundNote) {
-                            link.href = foundNote.url;
-                            link.textContent = linkText;
-                            link.className = 'wiki-link';
-                            
-                            link.addEventListener('mouseenter', function() {
-                                showPreview(this, foundNote.title, foundNote.excerpt);
-                            });
-                            
-                            link.addEventListener('mouseleave', function() {
-                                hidePreview();
-                            });
-                        } else {
-                            link.href = 'javascript:void(0)';
-                            link.textContent = linkText;
-                            link.className = 'stale-link';
-                            link.title = 'Note not found: ' + linkText;
+                        let targetText = linkText;
+                        let label = null;
+                        if (targetText.includes('|')) {
+                            const split = targetText.split('|');
+                            targetText = split[0];
+                            label = split[1] || null;
                         }
-                        
-                        linkSpan.appendChild(link);
+
+                        const foundFile = findFileByName(targetText);
+                        if (foundFile) {
+                            const link = document.createElement('a');
+                            link.href = foundFile.url;
+                            link.target = '_blank';
+                            link.rel = 'noopener';
+                            link.textContent = label || targetText;
+                            link.className = 'file-link';
+                            linkSpan.appendChild(link);
+                        } else {
+                            const foundNote = findNoteByTitle(linkText);
+                            const link = document.createElement('a');
+                            
+                            if (foundNote) {
+                                link.href = foundNote.url;
+                                link.textContent = linkText;
+                                link.className = 'wiki-link';
+                                
+                                link.addEventListener('mouseenter', function() {
+                                    showPreview(this, foundNote.title, foundNote.excerpt);
+                                });
+                                
+                                link.addEventListener('mouseleave', function() {
+                                    hidePreview();
+                                });
+                            } else {
+                                link.href = 'javascript:void(0)';
+                                link.textContent = linkText;
+                                link.className = 'stale-link';
+                                link.title = 'Note not found: ' + linkText;
+                            }
+                            
+                            linkSpan.appendChild(link);
+                        }
                     }
                     
                     fragments.push(linkSpan);
