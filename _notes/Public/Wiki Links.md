@@ -24,7 +24,25 @@ For more information, check out [[Jekyll::https://jekyllrb.com]].
 
 When you create a wiki link to another note, that note automatically shows a "Backlinks" section. For example, if you visit [[Getting Started]], you'll see this note listed there because we linked to it.
 
+## Images
 
+```markdown
+![[screen-shot.png]]
+```
+
+![[screen-shot.png]]
+
+## Files
+
+support `pdf`,`zip`,`pptx`.
+
+```markdown
+- [[lecture0.pdf]]
+- [[lecture0.zip]]
+```
+
+- [[lecture0.pdf]]
+- [[lecture0.zip]]
 ## Troubleshooting
 
 If a wiki link appears broken:
