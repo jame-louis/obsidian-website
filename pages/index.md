@@ -12,3 +12,6 @@ Jekyll Garden is a simple theme that turns your Obsidian notes into a beautiful 
 Start by reading [[Getting Started]] to set up your own Jekyll Garden. Learn how to use [[Wiki Links]] to connect your notes, explore the [[Markdown Guide]] for formatting, and customize your site with the [[Customization]] guide. When you're ready to share your notes online, follow the [[Deployment]] instructions.
 
 ![[screen-shot.png]]
+
+- [[lecture0.pdf]]
+- [[lecture0.zip]]
