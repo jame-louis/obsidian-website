@@ -18,12 +18,31 @@ document.addEventListener('DOMContentLoaded', function() {
             }{%- unless forloop.last -%},{%- endunless -%}
         {%- endfor -%}
     ];
+
+    const availableImages = [
+        {%- assign imgs = site.static_files | where_exp:"f","f.extname == '.png' or f.extname == '.jpg' or f.extname == '.jpeg' or f.extname == '.gif' or f.extname == '.svg' or f.extname == '.webp'" -%}
+        {%- for f in imgs -%}
+            {
+                name: "{{ f.name | escape }}",
+                url: "{{ site.baseurl }}{{ f.path | escape }}"
+            }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+    ];
     
     // Function to find note by title (case-insensitive)
     function findNoteByTitle(title) {
         return availableNotes.find(note => 
             note.title.toLowerCase() === title.toLowerCase()
         );
+    }
+
+    function findImageByName(name) {
+        const lowered = name.toLowerCase();
+        const exact = availableImages.find(img => img.name.toLowerCase() === lowered);
+        if (exact) return exact;
+        const stripExt = s => s.replace(/\.[^./\\]+$/, '');
+        const base = stripExt(lowered);
+        return availableImages.find(img => stripExt(img.name.toLowerCase()) === base);
     }
     
     // Function to process wiki links in text nodes only
@@ -42,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Process wiki links in this text node
             const text = node.textContent;
-            const wikiLinkRegex = /\[\[([^\]]+)\]\]/g;
+            const wikiLinkRegex = /!?\[\[([^\]]+)\]\]/g;
             let match;
             let lastIndex = 0;
             const fragments = [];
@@ -54,47 +73,102 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 const linkText = match[1];
-                const linkSpan = document.createElement('span');
-                
-                // Check if it's an external link (contains ::)
-                if (linkText.includes('::')) {
-                    const [title, url] = linkText.split('::');
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.target = '_blank';
-                    link.rel = 'noopener';
-                    link.textContent = title;
-                    linkSpan.appendChild(link);
-                } else {
-                    // Internal link - try to find the note
-                    const foundNote = findNoteByTitle(linkText);
-                    const link = document.createElement('a');
-                    
-                    if (foundNote) {
-                        link.href = foundNote.url;
-                        link.textContent = linkText;
-                        link.className = 'wiki-link';
-                        
-                        // Add hover preview functionality
-                        link.addEventListener('mouseenter', function() {
-                            showPreview(this, foundNote.title, foundNote.excerpt);
-                        });
-                        
-                        link.addEventListener('mouseleave', function() {
-                            hidePreview();
-                        });
+                const isImage = match[0].charAt(0) === '!';
+                const containerSpan = document.createElement('span');
+
+                if (isImage) {
+                    let target = linkText;
+                    let alt = '';
+                    let width = null;
+                    let height = null;
+
+                    if (target.includes('::')) {
+                        const parts = target.split('::');
+                        const titlePart = parts[0];
+                        const urlPart = parts.slice(1).join('::');
+                        const img = document.createElement('img');
+                        img.src = urlPart;
+                        img.alt = titlePart || '';
+                        containerSpan.appendChild(img);
                     } else {
-                        // Note doesn't exist - create a placeholder
-                        link.href = 'javascript:void(0)';
-                        link.textContent = linkText;
-                        link.className = 'stale-link';
-                        link.title = 'Note not found: ' + linkText;
+                        let meta = null;
+                        if (target.includes('|')) {
+                            const split = target.split('|');
+                            target = split[0];
+                            meta = split[1];
+                            if (meta) {
+                                if (/^\d+x\d+$/.test(meta)) {
+                                    const dims = meta.split('x');
+                                    width = parseInt(dims[0], 10);
+                                    height = parseInt(dims[1], 10);
+                                } else if (/^\d+$/.test(meta)) {
+                                    width = parseInt(meta, 10);
+                                } else {
+                                    alt = meta;
+                                }
+                            }
+                        }
+
+                        const foundImage = findImageByName(target);
+                        if (foundImage) {
+                            const img = document.createElement('img');
+                            img.src = foundImage.url;
+                            img.alt = alt || target;
+                            if (width) img.width = width;
+                            if (height) img.height = height;
+                            containerSpan.appendChild(img);
+                        } else {
+                            const placeholder = document.createElement('span');
+                            placeholder.className = 'stale-image';
+                            placeholder.textContent = target;
+                            placeholder.title = 'Image not found: ' + target;
+                            containerSpan.appendChild(placeholder);
+                        }
+                    }
+
+                    fragments.push(containerSpan);
+                } else {
+                    const linkSpan = document.createElement('span');
+
+                    if (linkText.includes('::')) {
+                        const parts = linkText.split('::');
+                        const title = parts[0];
+                        const url = parts.slice(1).join('::');
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.target = '_blank';
+                        link.rel = 'noopener';
+                        link.textContent = title;
+                        linkSpan.appendChild(link);
+                    } else {
+                        const foundNote = findNoteByTitle(linkText);
+                        const link = document.createElement('a');
+                        
+                        if (foundNote) {
+                            link.href = foundNote.url;
+                            link.textContent = linkText;
+                            link.className = 'wiki-link';
+                            
+                            link.addEventListener('mouseenter', function() {
+                                showPreview(this, foundNote.title, foundNote.excerpt);
+                            });
+                            
+                            link.addEventListener('mouseleave', function() {
+                                hidePreview();
+                            });
+                        } else {
+                            link.href = 'javascript:void(0)';
+                            link.textContent = linkText;
+                            link.className = 'stale-link';
+                            link.title = 'Note not found: ' + linkText;
+                        }
+                        
+                        linkSpan.appendChild(link);
                     }
                     
-                    linkSpan.appendChild(link);
+                    fragments.push(linkSpan);
                 }
-                
-                fragments.push(linkSpan);
+
                 lastIndex = match.index + match[0].length;
             }
             
