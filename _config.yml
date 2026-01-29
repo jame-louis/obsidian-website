@@ -35,11 +35,11 @@ preferences:
     enabled: true
 
 # Site Configuration
-title: "Your Site Title"
-heading: "Your Name"
-description: "A brief description of your site"
-url: "https://yoursite.com"
-baseurl: ""
+title: "obsidian website"
+heading: "佚名"
+description: "obsidian for note-taking, and jekyll for publishing."
+url: ""
+baseurl: "/obsidian-website"
 
 # Asset Configuration
 apple_touch_icon: "/assets/img/profile.png"
